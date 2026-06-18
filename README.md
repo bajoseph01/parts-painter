@@ -37,8 +37,8 @@ For learner iPads, share the live GitHub Pages URL and ask learners to use lands
 
 - Full-screen landscape notebook/anchor-chart design.
 - Real PNG background, no SVG background reconstruction.
-- Touch-friendly Tools button for opening the teacher tray on iPads.
-- Hover/focus teacher tray still works on desktop and smartboards.
+- Small pulsing pull-down arrow at the top middle for opening the teacher tray on iPads, desktops, and smartboards.
+- The teacher tray no longer opens on hover.
 - Passage dropdown with:
   - original demo text
   - 3 Grade 4 South African English texts
@@ -166,8 +166,9 @@ node "$env:USERPROFILE\.codex\tools\visual-check-runtime\run-visual-check.mjs" -
 
 Recent working screenshots:
 
-- `screenshots/parts-painter-ipad-landscape.png`
-- `screenshots/parts-painter-ipad-portrait.png`
+- `screenshots/parts-painter-arrow-default.png`
+- `screenshots/parts-painter-arrow-open.png`
+- `screenshots/parts-painter-arrow-portrait.png`
 
 ## Deferred Ideas
 

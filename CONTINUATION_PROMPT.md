@@ -18,7 +18,8 @@ Important design direction:
 - Do not recreate the background art with SVGs or CSS doodles.
 - Keep the live interaction layer inside the central writing space.
 - Preserve dynamic autofit for reading text and word tiles.
-- Keep teacher controls large and readable. Preserve the visible `Tools` button for iPads and hover/focus support for desktop.
+- Keep teacher controls large and readable. Preserve the small pulsing top-middle pull-down arrow for opening the tray.
+- Do not reintroduce hover-open behavior for the teacher tray.
 - Keep startup learner-safe: Free Paint mode with plain tiles, not memo reveal.
 - Use Playwright screenshot checks before finalising visual changes.
 
@@ -38,7 +39,7 @@ Next likely work:
 
 1. Check `git status`.
 2. Run iPad landscape and portrait visual checks.
-3. Use the visible `Tools` button and capture a controls-open screenshot.
+3. Use the visible pull-down arrow and capture a controls-open screenshot.
 4. If GitHub remote is not created yet, create/push the repo and enable GitHub Pages from `main` root.
 5. If adding features, keep them teacher-board simple and avoid accounts, dashboards, AI tagging, marks, or a full assessment system.
 
