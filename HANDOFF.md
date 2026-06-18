@@ -31,7 +31,9 @@ The user wanted a new app folder for `Parts Painter`: a single-page HTML/CSS/JS 
 
 - Background processes: none
 - Dev servers / ports: none
-- Open worktrees / branches: local git repo may exist after the GitHub Pages prep pass; check `git status` first.
+- GitHub repo: `https://github.com/bajoseph01/parts-painter`
+- Live Pages URL: `https://bajoseph01.github.io/parts-painter/`
+- Open worktrees / branches: local git repo on `main`; check `git status` first.
 
 ## Verification - how to confirm things still work
 

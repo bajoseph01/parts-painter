@@ -12,13 +12,17 @@ The live app layer sits inside the central writing space and dynamically fits re
 
 Ready for GitHub Pages as a static site. No build step is required.
 
+Live site:
+
+`https://bajoseph01.github.io/parts-painter/`
+
 Recommended GitHub Pages settings:
 
 - Source: `Deploy from a branch`
 - Branch: `main`
 - Folder: `/ (root)`
 
-For learner iPads, share the GitHub Pages URL and ask learners to use landscape orientation. The app now opens in learner-safe Free Paint mode, not with the answer memo showing.
+For learner iPads, share the live GitHub Pages URL and ask learners to use landscape orientation. The app now opens in learner-safe Free Paint mode, not with the answer memo showing.
 
 ## Files
 
