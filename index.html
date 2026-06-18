@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <title>Parts Painter</title>
+  <style>
+    :root {
+      --noun: #111111;
+      --verb: #ff1d18;
+      --adjective: #175de6;
+      --adverb: #ff5b18;
+      --preposition: #138c28;
+      --pronoun: #f22678;
+      --conjunction: #6922c9;
+      --interjection: #0c9eaa;
+      --article: #a8a8a8;
+      --ink: #101010;
+      --soft: #747474;
+      --hand: "Comic Sans MS", "Comic Sans", "Trebuchet MS", cursive;
+      --ui: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      margin: 0;
+      overflow: hidden;
+      background: #f5f7f5;
+      color: var(--ink);
+      font-family: var(--hand);
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      color: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .stage {
+      position: relative;
+      width: min(100vw, calc(100vh * 1490 / 1053));
+      height: min(100vh, calc(100vw * 1053 / 1490));
+      margin: auto;
+      top: 50%;
+      transform: translateY(-50%);
+      background: url("assets/background.png") center / 100% 100% no-repeat;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .live-board {
+      position: absolute;
+      left: 19.05%;
+      top: 23.1%;
+      width: 63.4%;
+      height: 56.6%;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 0.7%;
+      padding: 0.5% 1.35% 1.1%;
+      border-radius: 28px;
+      background: #ffffff;
+    }
+
+    .board-title {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(26px, 3.5vw, 58px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .board-title.hidden {
+      visibility: hidden;
+    }
+
+    .content-space {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .content-space.blank::after {
+      content: "Press Add Text";
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      transform: translate(-50%, -50%) rotate(-1deg);
+      color: rgba(0, 0, 0, 0.18);
+      font-size: clamp(34px, 4vw, 72px);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .reading-text {
+      width: 100%;
+      height: 100%;
+      padding: 2.3% 2.6%;
+      font-size: var(--reading-size, 34px);
+      font-weight: 750;
+      line-height: var(--reading-leading, 1.42);
+      text-align: left;
+      overflow: hidden;
+    }
+
+    .tile-grid {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: var(--tile-gap, 7px);
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      padding: 0.4% 0.2%;
+    }
+
+    .word {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      min-width: var(--tile-min, 76px);
+      height: var(--tile-height, 37px);
+      border: var(--tile-border, 2.2px) solid var(--paint, var(--ink));
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 1.5px 2.2px 0 rgba(0, 0, 0, 0.13);
+      padding: 0 var(--tile-pad, 9px) 2px;
+      color: var(--paint, var(--ink));
+      font-size: var(--tile-font, 23px);
+      font-weight: 900;
+      line-height: 1;
+      transition: transform 130ms ease, box-shadow 130ms ease, background-color 130ms ease;
+      user-select: none;
+    }
+
+    .word:hover,
+    .word:focus-visible {
+      transform: translateY(-4px) rotate(-1deg);
+      box-shadow: 3px 6px 0 rgba(0, 0, 0, 0.12);
+      outline: none;
+    }
+
+    .word:active {
+      transform: scale(0.98) rotate(1deg);
+    }
+
+    .word.article {
+      color: var(--soft);
+      border-color: var(--article);
+      border-style: dotted;
+      background:
+        radial-gradient(circle, rgba(168, 168, 168, 0.5) 1.25px, transparent 1.5px),
+        rgba(255, 255, 255, 0.88);
+      background-size: 8px 8px;
+    }
+
+    .word.correct {
+      animation: pop 260ms ease-out;
+    }
+
+    .word.correct::after {
+      content: "✓";
+      position: absolute;
+      right: -12px;
+      top: -13px;
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--preposition);
+      border-radius: 999px;
+      background: white;
+      color: var(--preposition);
+      font-family: var(--ui);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .word.incorrect {
+      animation: shake 270ms ease-in-out;
+    }
+
+    .tools-toggle {
+      position: absolute;
+      right: 2.5%;
+      top: 2.2%;
+      z-index: 8;
+      min-width: 96px;
+      min-height: 48px;
+      border: 4px solid var(--ink);
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.18);
+      padding: 7px 12px 8px;
+      font-family: var(--ui);
+      font-size: clamp(17px, 1.3vw, 24px);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .tools-toggle[aria-expanded="true"] {
+      background: var(--ink);
+      color: white;
+    }
+
+    .stage.tools-open .tools-toggle {
+      display: none;
+    }
+
+    .teacher-bar {
+      position: absolute;
+      left: 5.8%;
+      top: 1.3%;
+      z-index: 6;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 88.4%;
+      border: 4px solid var(--ink);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 5px 7px 0 rgba(0, 0, 0, 0.18);
+      padding: 9px 12px;
+      opacity: 0;
+      transform: translateY(-14px) rotate(-0.5deg);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .stage:hover .teacher-bar,
+    .stage.tools-open .teacher-bar,
+    .teacher-bar:hover,
+    .teacher-bar:focus-within {
+      opacity: 1;
+      transform: translateY(0) rotate(-0.5deg);
+    }
+
+    .tool-btn {
+      min-height: 48px;
+      border: 3px solid var(--ink);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.16);
+      padding: 8px 13px 9px;
+      font-family: var(--ui);
+      font-size: clamp(18px, 1.25vw, 23px);
+      font-weight: 900;
+      line-height: 1.05;
+    }
+
+    .bank-select {
+      width: min(330px, 27%);
+      min-width: 250px;
+      min-height: 48px;
+      border: 3px solid var(--ink);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.16);
+      padding: 8px 12px 9px;
+      font-family: var(--ui);
+      font-size: clamp(18px, 1.25vw, 23px);
+      font-weight: 900;
+    }
+
+    .tool-btn.active {
+      background: var(--ink);
+      color: white;
+    }
+
+    .hotspot {
+      position: absolute;
+      z-index: 5;
+      border: 0;
+      border-radius: 24px;
+      background: transparent;
+      color: transparent;
+    }
+
+    .hotspot:focus-visible {
+      outline: 4px solid rgba(0, 0, 0, 0.45);
+      outline-offset: 4px;
+    }
+
+    .noun-hot { left: 9.8%; top: 4.2%; width: 12.2%; height: 14.5%; }
+    .verb-hot { left: 38.1%; top: 3.9%; width: 12.2%; height: 14%; }
+    .adjective-hot { left: 65.5%; top: 3.5%; width: 18.8%; height: 17%; }
+    .pronoun-hot { left: 4%; top: 25.2%; width: 12.5%; height: 23%; }
+    .conjunction-hot { left: 3.5%; top: 57.2%; width: 17%; height: 20%; }
+    .adverb-hot { left: 85.5%; top: 27%; width: 10.5%; height: 23%; }
+    .interjection-hot { left: 84.1%; top: 63.2%; width: 12.6%; height: 18%; }
+    .preposition-hot { left: 24%; top: 82.2%; width: 20%; height: 14%; }
+    .article-hot { left: 46.2%; top: 82.4%; width: 14.3%; height: 14%; }
+
+    .mixer {
+      position: absolute;
+      right: 3.7%;
+      bottom: 5.8%;
+      z-index: 7;
+      width: 16.8%;
+      min-height: 92px;
+      border: 3px solid var(--ink);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.12);
+      padding: 8px 11px;
+      opacity: 0;
+      transform: rotate(-1deg);
+      transition: opacity 160ms ease;
+    }
+
+    .stage:hover .mixer,
+    .stage.tools-open .mixer,
+    .mixer:focus-within {
+      opacity: 1;
+    }
+
+    .mixer-title {
+      color: var(--selected, var(--noun));
+      font-size: clamp(20px, 1.9vw, 34px);
+      font-weight: 900;
+      line-height: 0.95;
+    }
+
+    .mixer-question {
+      margin-top: 4px;
+      font-family: var(--ui);
+      font-size: clamp(12px, 1vw, 17px);
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .hint {
+      position: absolute;
+      left: 18.6%;
+      bottom: 2.2%;
+      z-index: 7;
+      width: 39%;
+      font-family: var(--ui);
+      font-size: clamp(13px, 1vw, 18px);
+      font-weight: 900;
+      line-height: 1.15;
+      opacity: 0;
+      transform: rotate(-1deg);
+      transition: opacity 160ms ease;
+    }
+
+    .stage:hover .hint {
+      opacity: 1;
+    }
+
+    .drawer {
+      position: absolute;
+      left: 50%;
+      bottom: 2%;
+      z-index: 10;
+      display: none;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      width: 56%;
+      min-height: 124px;
+      border: 3px solid var(--ink);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.14);
+      padding: 10px;
+      transform: translateX(-50%) rotate(-0.4deg);
+    }
+
+    .drawer.open {
+      display: grid;
+    }
+
+    .drawer textarea {
+      width: 100%;
+      min-height: 100px;
+      resize: none;
+      border: 2.5px solid var(--ink);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-family: var(--ui);
+      font-size: 17px;
+      line-height: 1.3;
+    }
+
+    .drawer-actions {
+      display: grid;
+      align-content: start;
+      gap: 7px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 14px;
+      z-index: 20;
+      transform: translate(-50%, -10px);
+      max-width: min(720px, calc(100vw - 40px));
+      border: 3px solid var(--ink);
+      border-radius: 16px;
+      background: white;
+      box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.16);
+      padding: 9px 16px;
+      font-family: var(--ui);
+      font-size: 18px;
+      font-weight: 900;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.96) rotate(-1deg); }
+      55% { transform: scale(1.09) rotate(1deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      24% { transform: translateX(-8px) rotate(-1.2deg); }
+      52% { transform: translateX(7px) rotate(1deg); }
+      76% { transform: translateX(-4px) rotate(-0.5deg); }
+    }
+
+    @media print {
+      @page {
+        size: landscape;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: white;
+      }
+
+      .stage {
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        margin: 0;
+        transform: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .teacher-bar,
+      .hotspot,
+      .mixer,
+      .hint,
+      .drawer,
+      .toast {
+        display: none !important;
+      }
+
+      .word {
+        box-shadow: none;
+      }
+
+      .word.correct::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" aria-label="Parts Painter">
+    <button id="toolsToggle" class="tools-toggle" type="button" aria-expanded="false" aria-controls="teacherBar">Tools</button>
+
+    <nav id="teacherBar" class="teacher-bar" aria-label="Teacher controls">
+      <label class="sr-only" for="textBankSelect">Choose a passage</label>
+      <select id="textBankSelect" class="bank-select"></select>
+      <button id="addTextBtn" class="tool-btn" type="button">Add Text</button>
+      <button id="blockWordsBtn" class="tool-btn" type="button">Block Words</button>
+      <button id="freeBtn" class="tool-btn active" type="button">Free Paint</button>
+      <button id="teachBtn" class="tool-btn" type="button">Teach Mode</button>
+      <button id="eraserBtn" class="tool-btn" type="button">Eraser</button>
+      <button id="guidedBtn" class="tool-btn" type="button">Guided Check</button>
+      <button id="memoBtn" class="tool-btn" type="button">Show Memo</button>
+      <button id="printBtn" class="tool-btn" type="button">Print</button>
+      <button id="resetBtn" class="tool-btn" type="button">Reset</button>
+      <button id="hideToolsBtn" class="tool-btn" type="button">Hide</button>
+    </nav>
+
+    <section class="live-board" aria-label="Live writing space">
+      <h1 id="boardTitle" class="board-title">The Match at Break Time</h1>
+      <div id="contentSpace" class="content-space blank" aria-label="Passage space"></div>
+    </section>
+
+    <button class="hotspot noun-hot" data-part="noun" type="button">Noun</button>
+    <button class="hotspot verb-hot" data-part="verb" type="button">Verb</button>
+    <button class="hotspot adjective-hot" data-part="adjective" type="button">Adjective</button>
+    <button class="hotspot pronoun-hot" data-part="pronoun" type="button">Pronoun</button>
+    <button class="hotspot conjunction-hot" data-part="conjunction" type="button">Conjunction</button>
+    <button class="hotspot adverb-hot" data-part="adverb" type="button">Adverb</button>
+    <button class="hotspot interjection-hot" data-part="interjection" type="button">Interjection</button>
+    <button class="hotspot preposition-hot" data-part="preposition" type="button">Preposition</button>
+    <button class="hotspot article-hot" data-part="article" type="button">Article</button>
+
+    <aside id="mixer" class="mixer" style="--selected: var(--noun);" aria-label="Grammar Mixer">
+      <div id="mixerTitle" class="mixer-title">Noun</div>
+      <div id="mixerQuestion" class="mixer-question">Who or what is named here?</div>
+    </aside>
+
+    <div id="hint" class="hint">Tap a grammar label, then tap words to paint them. Tools opens the teacher controls.</div>
+
+    <section id="drawer" class="drawer" aria-label="Add text">
+      <label class="sr-only" for="customText">Passage text</label>
+      <textarea id="customText"></textarea>
+      <div class="drawer-actions">
+        <button id="useTextBtn" class="tool-btn" type="button">Use Text</button>
+        <button id="demoTextBtn" class="tool-btn" type="button">Demo</button>
+        <button id="closeDrawerBtn" class="tool-btn" type="button">Close</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const PARTS = {
+      noun: { label: "Noun", color: "var(--noun)", question: "Who or what is named here?" },
+      verb: { label: "Verb", color: "var(--verb)", question: "What action or state is happening?" },
+      adjective: { label: "Adjective", color: "var(--adjective)", question: "Is it describing a noun?" },
+      adverb: { label: "Adverb", color: "var(--adverb)", question: "How, when, where, or how much?" },
+      preposition: { label: "Preposition", color: "var(--preposition)", question: "Is it showing place, time, or direction?" },
+      pronoun: { label: "Pronoun", color: "var(--pronoun)", question: "Which noun does it stand in for?" },
+      conjunction: { label: "Conjunction", color: "var(--conjunction)", question: "Is it joining words or ideas?" },
+      interjection: { label: "Interjection", color: "var(--interjection)", question: "Does it show sudden feeling?" },
+      article: { label: "Article", color: "var(--article)", question: "Is it a, an, or the?" }
+    };
+
+    const DEMO_TITLE = "The Match at Break Time";
+    const DEMO_WORDS = [
+      ["At", "preposition"], ["second", "adjective"], ["break,", "noun"], ["Sipho", "noun"], ["carried", "verb"], ["a", "article"], ["bright", "adjective"], ["soccer", "adjective"], ["ball", "noun"],
+      ["to", "preposition"], ["the", "article"], ["netball", "adjective"], ["court.", "noun"], ["A", "article"], ["cheerful", "adjective"], ["group", "noun"], ["of", "preposition"], ["friends", "noun"],
+      ["waited", "verb"], ["near", "preposition"], ["the", "article"], ["shady", "adjective"], ["wall.", "noun"], ["The", "article"], ["small", "adjective"], ["teams", "noun"], ["chose", "verb"],
+      ["their", "pronoun"], ["players,", "noun"], ["and", "conjunction"], ["the", "article"], ["game", "noun"], ["began", "verb"], ["quickly.", "adverb"],
+      ["Lindi", "noun"], ["passed", "verb"], ["the", "article"], ["ball", "noun"], ["neatly", "adverb"], ["because", "conjunction"], ["the", "article"], ["ground", "noun"], ["was", "verb"], ["dusty.", "adjective"],
+      ["A", "article"], ["tall", "adjective"], ["boy", "noun"], ["blocked", "verb"], ["the", "article"], ["shot,", "noun"], ["but", "conjunction"], ["Thandi", "noun"], ["chased", "verb"],
+      ["the", "article"], ["ball", "noun"], ["bravely.", "adverb"], ["Near", "preposition"], ["the", "article"], ["goal,", "noun"], ["the", "article"], ["excited", "adjective"], ["crowd", "noun"],
+      ["clapped", "verb"], ["loudly", "adverb"], ["when", "conjunction"], ["Musa", "noun"], ["scored.", "verb"], ["The", "article"], ["class", "adjective"], ["teacher", "noun"],
+      ["smiled", "verb"], ["from", "preposition"], ["the", "article"], ["veranda,", "noun"], ["and", "conjunction"], ["she", "pronoun"], ["waved", "verb"], ["at", "preposition"], ["the", "article"],
+      ["happy", "adjective"], ["players.", "noun"], ["After", "preposition"], ["the", "article"], ["match,", "noun"], ["the", "article"], ["children", "noun"], ["shared", "verb"],
+      ["cool", "adjective"], ["water", "noun"], ["and", "conjunction"], ["talked", "verb"], ["about", "preposition"], ["the", "article"], ["best", "adjective"], ["goal.", "noun"]
+    ];
+
+    function tagged(text) {
+      return text.trim().split(/\s+/).map((item) => {
+        const splitAt = item.lastIndexOf("|");
+        return [item.slice(0, splitAt), item.slice(splitAt + 1)];
+      });
+    }
+
+    function wordsToText(words) {
+      return words.map(([word]) => word).join(" ");
+    }
+
+    const TEXT_BANK = [
+      {
+        id: "demo",
+        grade: "Demo",
+        title: DEMO_TITLE,
+        words: DEMO_WORDS
+      },
+      {
+        id: "g4-taxi",
+        grade: "Grade 4",
+        title: "A Rainy Taxi Ride",
+        words: tagged(`
+          The|article small|adjective taxi|noun stopped|verb near|preposition the|article school|adjective gate.|noun
+          Lindi|noun held|verb her|pronoun blue|adjective lunch|adjective bag|noun and|conjunction smiled.|verb
+          A|article kind|adjective driver|noun waved|verb when|conjunction the|article children|noun climbed|verb into|preposition the|article taxi.|noun
+          They|pronoun spoke|verb softly|adverb because|conjunction the|article rain|noun fell|verb loudly|adverb on|preposition the|article roof.|noun
+        `)
+      },
+      {
+        id: "g4-market",
+        grade: "Grade 4",
+        title: "Market Morning",
+        words: tagged(`
+          At|preposition the|article busy|adjective market,|noun Mama|noun bought|verb fresh|adjective mielies|noun and|conjunction ripe|adjective peaches.|noun
+          Thabo|noun carried|verb the|article heavy|adjective basket|noun carefully.|adverb
+          A|article friendly|adjective auntie|noun laughed|verb because|conjunction her|pronoun small|adjective dog|noun barked|verb loudly|adverb beside|preposition the|article stall.|noun
+        `)
+      },
+      {
+        id: "g4-beach",
+        grade: "Grade 4",
+        title: "Beach Clean-Up",
+        words: tagged(`
+          On|preposition Saturday,|noun our|pronoun class|noun cleaned|verb the|article windy|adjective beach.|noun
+          We|pronoun picked|verb up|preposition plastic|adjective bags|noun and|conjunction old|adjective bottles.|noun
+          The|article bright|adjective sun|noun shone|verb warmly,|adverb but|conjunction Sipho|noun worked|verb quickly|adverb near|preposition the|article rocks.|noun
+        `)
+      },
+      {
+        id: "g6-spaza",
+        grade: "Grade 6",
+        title: "The Spaza Shop Sign",
+        words: tagged(`
+          After|preposition school,|noun Naledi|noun designed|verb a|article neat|adjective poster|noun for|preposition her|pronoun uncle's|noun spaza|adjective shop.|noun
+          She|pronoun measured|verb the|article wooden|adjective door|noun carefully|adverb and|conjunction chose|verb bright|adjective colours|noun because|conjunction customers|noun notice|verb clear|adjective signs|noun quickly.|adverb
+        `)
+      },
+      {
+        id: "g6-robotics",
+        grade: "Grade 6",
+        title: "Robotics Club",
+        words: tagged(`
+          During|preposition robotics|adjective club,|noun the|article small|adjective team|noun tested|verb a|article clever|adjective sensor.|noun
+          Kabelo|noun adjusted|verb the|article loose|adjective wire|noun carefully|adverb while|conjunction Aisha|noun recorded|verb each|adjective result.|noun
+          The|article robot|noun turned|verb smoothly|adverb around|preposition the|article cardboard|adjective maze.|noun
+        `)
+      },
+      {
+        id: "g6-water",
+        grade: "Grade 6",
+        title: "Water-Wise Week",
+        words: tagged(`
+          During|preposition the|article dry|adjective week,|noun our|pronoun class|noun saved|verb grey|adjective water|noun for|preposition the|article vegetable|adjective garden.|noun
+          We|pronoun filled|verb the|article large|adjective drum|noun slowly|adverb and|conjunction covered|verb it|pronoun because|conjunction mosquitoes|noun breed|verb quickly|adverb in|preposition warm|adjective puddles.|noun
+        `)
+      },
+      {
+        id: "g9-debate",
+        grade: "Grade 9",
+        title: "Debate At Assembly",
+        words: tagged(`
+          Before|preposition assembly,|noun the|article Grade|adjective Nine|adjective speakers|noun prepared|verb a|article careful|adjective argument|noun about|preposition school|adjective uniforms.|noun
+          They|pronoun believed|verb that|conjunction neat|adjective clothing|noun builds|verb pride,|noun but|conjunction several|adjective learners|noun questioned|verb the|article rule|noun politely.|adverb
+          Afterwards,|adverb the|article principal|noun thanked|verb them|pronoun for|preposition the|article respectful|adjective debate.|noun
+        `)
+      },
+      {
+        id: "g9-loadshedding",
+        grade: "Grade 9",
+        title: "A Loadshedding Study Plan",
+        words: tagged(`
+          When|conjunction loadshedding|noun started,|verb Amogelang|noun moved|verb his|pronoun books|noun beside|preposition the|article window|noun and|conjunction planned|verb a|article focused|adjective history|adjective revision.|noun
+          The|article quiet|adjective room|noun became|verb darker,|adjective yet|conjunction he|pronoun worked|verb steadily|adverb because|conjunction the|article exam|noun mattered|verb greatly.|adverb
+        `)
+      },
+      {
+        id: "g9-river",
+        grade: "Grade 9",
+        title: "Local River Report",
+        words: tagged(`
+          For|preposition the|article geography|adjective project,|noun Zinhle|noun investigated|verb a|article polluted|adjective river|noun near|preposition her|pronoun town.|noun
+          She|pronoun interviewed|verb residents|noun and|conjunction photographed|verb broken|adjective pipes|noun carefully.|adverb
+          The|article report|noun explained|verb clearly|adverb that|conjunction dirty|adjective water|noun harms|verb small|adjective farms|noun and|conjunction nearby|adjective wetlands.|noun
+        `)
+      }
+    ];
+
+    const state = {
+      selected: "noun",
+      mode: "free",
+      stage: "tiles",
+      currentTitle: DEMO_TITLE,
+      currentText: wordsToText(DEMO_WORDS),
+      currentWords: DEMO_WORDS.map(([word, pos]) => ({ word, pos })),
+      hasAnswerKey: true,
+      memoVisible: false
+    };
+
+    const bankSelect = document.getElementById("textBankSelect");
+    const title = document.getElementById("boardTitle");
+    const space = document.getElementById("contentSpace");
+    const mixer = document.getElementById("mixer");
+    const mixerTitle = document.getElementById("mixerTitle");
+    const mixerQuestion = document.getElementById("mixerQuestion");
+    const hint = document.getElementById("hint");
+    const toast = document.getElementById("toast");
+    const drawer = document.getElementById("drawer");
+    const customText = document.getElementById("customText");
+    const stage = document.querySelector(".stage");
+    const toolsToggle = document.getElementById("toolsToggle");
+
+    function setToolsOpen(isOpen) {
+      stage.classList.toggle("tools-open", isOpen);
+      toolsToggle.setAttribute("aria-expanded", String(isOpen));
+    }
+
+    function tokenize(text) {
+      return text.replace(/\s+/g, " ").trim().match(/[A-Za-z]+(?:'[A-Za-z]+)?[,.!?;:]?|[0-9]+[,.!?;:]?/g) || [];
+    }
+
+    function populateTextBank() {
+      bankSelect.innerHTML = "";
+      TEXT_BANK.forEach((entry) => {
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = `${entry.grade}: ${entry.title}`;
+        bankSelect.appendChild(option);
+      });
+      const customOption = document.createElement("option");
+      customOption.value = "custom";
+      customOption.textContent = "Custom pasted text";
+      bankSelect.appendChild(customOption);
+      bankSelect.value = "demo";
+    }
+
+    function loadBankText(id, mode = "reading") {
+      const entry = TEXT_BANK.find((item) => item.id === id);
+      if (!entry) return;
+
+      state.currentTitle = entry.title;
+      state.currentText = wordsToText(entry.words);
+      state.currentWords = entry.words.map(([word, pos]) => ({ word, pos }));
+      state.hasAnswerKey = true;
+      state.memoVisible = false;
+      bankSelect.value = entry.id;
+      closeDrawer();
+
+      if (mode === "tiles") {
+        blockWords();
+      } else {
+        showReading();
+      }
+    }
+
+    function matchingBankText(text) {
+      const normalized = text.replace(/\s+/g, " ").trim();
+      return TEXT_BANK.find((entry) => wordsToText(entry.words) === normalized);
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      document.getElementById("freeBtn").classList.toggle("active", mode === "free");
+      document.getElementById("teachBtn").classList.toggle("active", mode === "teach");
+      document.getElementById("eraserBtn").classList.toggle("active", mode === "eraser");
+      document.getElementById("guidedBtn").classList.toggle("active", mode === "guided");
+      document.getElementById("memoBtn").classList.toggle("active", mode === "memo");
+
+      if (mode !== "memo" && state.memoVisible) {
+        clearAllPaint();
+        state.memoVisible = false;
+      }
+
+      if (mode === "free") {
+        clearChecks();
+        hint.textContent = state.stage === "tiles"
+          ? "Free Paint: choose a grammar label, then tap any word. Ask learners to explain the choice."
+          : "Add Text shows the passage. Block Words turns it into tappable grammar units.";
+      }
+
+      if (mode === "teach") {
+        clearChecks();
+        hint.textContent = state.hasAnswerKey
+          ? "Teach Mode: tap a word to reveal its colour. Double-tap it to reveal all words with that same job."
+          : "Teach Mode needs a bank passage with an answer key. Custom text stays in Free Paint.";
+      }
+
+      if (mode === "eraser") {
+        clearChecks();
+        hint.textContent = "Eraser: tap any painted tile to clear it back to plain black.";
+      }
+
+      if (mode === "guided") {
+        clearChecks();
+        hint.textContent = state.hasAnswerKey
+          ? "Guided Check: correct colours stick. Wrong colours shake and ask for another try."
+          : "Guided Check needs the demo answer key. Custom text stays in Free Paint.";
+      }
+
+      if (mode === "memo") {
+        showMemo();
+      }
+    }
+
+    function setPart(part) {
+      state.selected = part;
+      mixer.style.setProperty("--selected", PARTS[part].color);
+      mixerTitle.textContent = PARTS[part].label;
+      mixerQuestion.textContent = PARTS[part].question;
+    }
+
+    function openDrawer() {
+      setToolsOpen(true);
+      customText.value = state.currentText;
+      drawer.classList.add("open");
+      customText.focus();
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove("open");
+    }
+
+    function useCustomText() {
+      const next = customText.value.trim();
+      if (!next) {
+        showToast("Paste or type a passage first.");
+        return;
+      }
+
+      const matched = matchingBankText(next);
+      if (matched) {
+        loadBankText(matched.id, "reading");
+        return;
+      }
+
+      state.currentTitle = "Teacher Text";
+      state.currentText = next;
+      state.currentWords = tokenize(next).map((word) => ({ word, pos: "" }));
+      state.hasAnswerKey = false;
+      state.memoVisible = false;
+      bankSelect.value = "custom";
+      closeDrawer();
+      showReading();
+    }
+
+    function useDemoText() {
+      loadBankText("demo", "reading");
+    }
+
+    function showReading() {
+      state.stage = "reading";
+      state.memoVisible = false;
+      title.textContent = state.currentTitle;
+      title.classList.remove("hidden");
+      space.className = "content-space";
+      space.innerHTML = `<div id="readingText" class="reading-text"></div>`;
+      document.getElementById("readingText").textContent = state.currentText;
+      hint.textContent = "Read it naturally first. Then press Block Words to see the grammar units.";
+      fitReadingText();
+    }
+
+    function blockWords() {
+      state.stage = "tiles";
+      state.memoVisible = false;
+      title.textContent = state.currentTitle;
+      title.classList.remove("hidden");
+      space.className = "content-space";
+      space.innerHTML = `<div id="tileGrid" class="tile-grid"></div>`;
+      const grid = document.getElementById("tileGrid");
+      state.currentWords.forEach((item, index) => {
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "word";
+        tile.textContent = item.word;
+        tile.dataset.index = String(index);
+        tile.dataset.answer = item.pos || "";
+        tile.dataset.paint = "";
+        tile.addEventListener("click", () => paint(tile));
+        tile.addEventListener("dblclick", () => teachRevealFamily(tile));
+        grid.appendChild(tile);
+      });
+      hint.textContent = "The tiles auto-fit this writing space. Punctuation stays attached to each word.";
+      fitTiles();
+    }
+
+    function paint(tile) {
+      if (state.stage !== "tiles") {
+        showToast("Press Block Words first.");
+        return;
+      }
+
+      if (state.mode === "memo") {
+        showToast("Memo is showing. Press Free Paint to try again.");
+        return;
+      }
+
+      if (state.mode === "teach") {
+        teachPaint(tile);
+        return;
+      }
+
+      if (state.mode === "eraser") {
+        eraseTile(tile);
+        return;
+      }
+
+      if (state.mode === "guided") {
+        if (!state.hasAnswerKey) {
+          showToast("Custom text has no answer key yet. Use Free Paint.");
+          return;
+        }
+        if (tile.dataset.answer !== state.selected) {
+          tile.classList.remove("incorrect");
+          void tile.offsetWidth;
+          tile.classList.add("incorrect");
+          showToast("Try again. What job is this word doing?");
+          return;
+        }
+      }
+
+      applyPaint(tile, state.selected);
+      if (state.mode === "guided") {
+        tile.classList.add("correct");
+      }
+    }
+
+    function teachPaint(tile) {
+      if (!state.hasAnswerKey || !tile.dataset.answer) {
+        showToast("Teach Mode needs a bank passage with an answer key.");
+        return;
+      }
+
+      applyPaint(tile, tile.dataset.answer);
+      hint.textContent = `${tile.textContent} is ${PARTS[tile.dataset.answer].label.toLowerCase()}. Double-tap it to reveal all ${PARTS[tile.dataset.answer].label.toLowerCase()}s.`;
+    }
+
+    function teachRevealFamily(tile) {
+      if (state.mode !== "teach") return;
+      const part = tile.dataset.answer;
+      if (!state.hasAnswerKey || !part) return;
+
+      document.querySelectorAll(".word").forEach((wordTile) => {
+        if (wordTile.dataset.answer === part) {
+          applyPaint(wordTile, part);
+        }
+      });
+      hint.textContent = `Showing all ${PARTS[part].label.toLowerCase()}s in this passage.`;
+      showToast(`All ${PARTS[part].label.toLowerCase()}s revealed.`);
+    }
+
+    function applyPaint(tile, part) {
+      tile.dataset.paint = part;
+      tile.classList.add("painted");
+      tile.classList.toggle("article", part === "article");
+      tile.style.setProperty("--paint", PARTS[part].color);
+      tile.classList.remove("incorrect");
+    }
+
+    function eraseTile(tile) {
+      tile.dataset.paint = "";
+      tile.classList.remove("painted", "article", "correct", "incorrect");
+      tile.style.removeProperty("--paint");
+    }
+
+    function showMemo() {
+      if (state.memoVisible) {
+        hideMemo();
+        return;
+      }
+
+      if (!state.hasAnswerKey) {
+        showToast("Memo is available for the demo passage only.");
+        setMode("free");
+        return;
+      }
+      if (state.stage !== "tiles") {
+        blockWords();
+      }
+      state.mode = "memo";
+      document.getElementById("freeBtn").classList.remove("active");
+      document.getElementById("teachBtn").classList.remove("active");
+      document.getElementById("eraserBtn").classList.remove("active");
+      document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("memoBtn").classList.add("active");
+      document.querySelectorAll(".word").forEach((tile) => {
+        applyPaint(tile, tile.dataset.answer);
+        tile.classList.remove("correct", "incorrect");
+      });
+      state.memoVisible = true;
+      hint.textContent = "Memo Reveal: the teacher-approved colouring is showing.";
+      requestAnimationFrame(fitTiles);
+    }
+
+    function hideMemo() {
+      clearAllPaint();
+      state.memoVisible = false;
+      state.mode = "free";
+      document.getElementById("freeBtn").classList.add("active");
+      document.getElementById("teachBtn").classList.remove("active");
+      document.getElementById("eraserBtn").classList.remove("active");
+      document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("memoBtn").classList.remove("active");
+      hint.textContent = "Memo hidden. The words are back to plain tiles for teaching or repainting.";
+    }
+
+    function resetBoard() {
+      state.mode = "free";
+      state.stage = "blank";
+      state.memoVisible = false;
+      space.className = "content-space blank";
+      space.innerHTML = "";
+      title.textContent = "";
+      title.classList.add("hidden");
+      document.getElementById("freeBtn").classList.add("active");
+      document.getElementById("teachBtn").classList.remove("active");
+      document.getElementById("eraserBtn").classList.remove("active");
+      document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("memoBtn").classList.remove("active");
+      hint.textContent = "Add Text shows the passage. Block Words turns it into tappable grammar units.";
+    }
+
+    function clearChecks() {
+      document.querySelectorAll(".word").forEach((tile) => tile.classList.remove("correct", "incorrect"));
+    }
+
+    function clearAllPaint() {
+      document.querySelectorAll(".word").forEach((tile) => eraseTile(tile));
+    }
+
+    function fitReadingText() {
+      const text = document.getElementById("readingText");
+      if (!text) return;
+
+      const parent = text.parentElement;
+      let low = 16;
+      let high = 88;
+      let best = low;
+
+      for (let i = 0; i < 16; i++) {
+        const mid = (low + high) / 2;
+        text.style.setProperty("--reading-size", `${mid}px`);
+        text.style.setProperty("--reading-leading", mid > 38 ? "1.35" : "1.42");
+        if (text.scrollHeight <= parent.clientHeight && text.scrollWidth <= parent.clientWidth) {
+          best = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+
+      text.style.setProperty("--reading-size", `${Math.floor(best)}px`);
+    }
+
+    function fitTiles() {
+      const grid = document.getElementById("tileGrid");
+      if (!grid) return;
+
+      let low = 12;
+      let high = 46;
+      let best = low;
+
+      for (let i = 0; i < 18; i++) {
+        const mid = (low + high) / 2;
+        applyTileScale(grid, mid);
+        if (grid.scrollHeight <= grid.clientHeight && grid.scrollWidth <= grid.clientWidth) {
+          best = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+
+      applyTileScale(grid, Math.floor(best));
+    }
+
+    function applyTileScale(grid, size) {
+      const min = Math.max(36, size * 2.45);
+      const height = Math.max(25, size * 1.48);
+      const gap = Math.max(4, size * 0.22);
+      const pad = Math.max(6, size * 0.3);
+      const border = Math.max(1.8, size * 0.09);
+      grid.style.setProperty("--tile-font", `${size}px`);
+      grid.style.setProperty("--tile-min", `${min}px`);
+      grid.style.setProperty("--tile-height", `${height}px`);
+      grid.style.setProperty("--tile-gap", `${gap}px`);
+      grid.style.setProperty("--tile-pad", `${pad}px`);
+      grid.style.setProperty("--tile-border", `${border}px`);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2300);
+    }
+
+    function printCurrentMode() {
+      closeDrawer();
+      fitReadingText();
+      fitTiles();
+      window.print();
+    }
+
+    document.getElementById("addTextBtn").addEventListener("click", openDrawer);
+    document.getElementById("blockWordsBtn").addEventListener("click", blockWords);
+    document.getElementById("freeBtn").addEventListener("click", () => setMode("free"));
+    document.getElementById("teachBtn").addEventListener("click", () => setMode("teach"));
+    document.getElementById("eraserBtn").addEventListener("click", () => setMode("eraser"));
+    document.getElementById("guidedBtn").addEventListener("click", () => setMode("guided"));
+    document.getElementById("memoBtn").addEventListener("click", () => setMode("memo"));
+    document.getElementById("printBtn").addEventListener("click", printCurrentMode);
+    document.getElementById("resetBtn").addEventListener("click", resetBoard);
+    toolsToggle.addEventListener("click", () => {
+      setToolsOpen(!stage.classList.contains("tools-open"));
+    });
+    document.getElementById("hideToolsBtn").addEventListener("click", () => setToolsOpen(false));
+    document.getElementById("useTextBtn").addEventListener("click", useCustomText);
+    document.getElementById("demoTextBtn").addEventListener("click", useDemoText);
+    document.getElementById("closeDrawerBtn").addEventListener("click", closeDrawer);
+    bankSelect.addEventListener("change", () => {
+      if (bankSelect.value === "custom") {
+        openDrawer();
+        return;
+      }
+      loadBankText(bankSelect.value, "reading");
+    });
+
+    document.querySelectorAll(".hotspot").forEach((button) => {
+      button.addEventListener("click", () => setPart(button.dataset.part));
+    });
+
+    window.addEventListener("resize", () => {
+      fitReadingText();
+      fitTiles();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeDrawer();
+        setToolsOpen(false);
+      }
+    });
+
+    populateTextBank();
+    setPart("noun");
+    blockWords();
+    setMode("free");
+  </script>
+</body>
+</html>
