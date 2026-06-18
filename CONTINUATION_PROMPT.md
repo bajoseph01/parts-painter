@@ -2,6 +2,10 @@
 
 You are continuing work on `Parts Painter`, a self-contained classroom HTML app.
 
+Current branch for Test Mode progression:
+
+`feature/test-mode-progression`
+
 Project root:
 
 `C:\Users\bjoseph\OneDrive - Merrifield Prep & College\2026_Coding`
@@ -26,11 +30,13 @@ Important design direction:
 Current app features:
 
 - passage dropdown: original demo plus 9 keyed SA English texts
+- level-gated passage access: Demo + Grade 4 first, then Grade 6 and Grade 9 unlock via Test Mode full marks
 - custom pasted text textbox
 - Free Paint
 - Teach Mode
 - Eraser
 - Guided Check
+- Test Mode with floating Submit Test and local `partsPainterProgressV1` progress
 - Show Memo toggle
 - Print current mode/state
 - dynamic text/tile fitting
@@ -40,7 +46,7 @@ Next likely work:
 1. Check `git status`.
 2. Run iPad landscape and portrait visual checks.
 3. Use the visible pull-down arrow and capture a controls-open screenshot.
-4. If GitHub remote is not created yet, create/push the repo and enable GitHub Pages from `main` root.
+4. Re-run the Test Mode progression check before merging: Demo + Grade 4 only at first, wrong Grade 4 test does not unlock, full marks Grade 4 unlocks Grade 6, full marks Grade 6 unlocks Grade 9.
 5. If adding features, keep them teacher-board simple and avoid accounts, dashboards, AI tagging, marks, or a full assessment system.
 
 Useful command:

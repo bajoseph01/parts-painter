@@ -16,6 +16,10 @@ Live site:
 
 `https://bajoseph01.github.io/parts-painter/`
 
+Current feature branch for Test Mode progression:
+
+`feature/test-mode-progression`
+
 Recommended GitHub Pages settings:
 
 - Source: `Deploy from a branch`
@@ -56,6 +60,12 @@ For learner iPads, share the live GitHub Pages URL and ask learners to use lands
   - double-click the word to reveal all words with the same part of speech
 - Eraser mode.
 - Guided Check mode.
+- Test Mode:
+  - starts with Demo and Grade 4 passages unlocked
+  - Grade 6 passages unlock after full marks on any Grade 4 test
+  - Grade 9 passages unlock after full marks on any Grade 6 test
+  - progress is saved on the current iPad/browser with `localStorage`
+  - Submit Test appears as a floating button so the toolbar does not cover the words
 - Show Memo toggle:
   - first click reveals memo colouring
   - second click hides memo colouring and returns to plain word tiles
@@ -133,6 +143,23 @@ For keyed passages only:
 - incorrect choices shake
 - a short hint appears
 
+### Test Mode
+
+For keyed passages only:
+
+- learners paint every word
+- `Submit Test` marks the attempt
+- wrong or unanswered words shake
+- full marks unlock the next grade band on that iPad
+
+Unlock order:
+
+1. Demo and Grade 4 are available at the start.
+2. Grade 6 unlocks after full marks on any Grade 4 passage.
+3. Grade 9 unlocks after full marks on any Grade 6 passage.
+
+`Reset Progress` clears saved unlocks on the current iPad and returns the app to Demo + Grade 4.
+
 ### Show Memo
 
 Toggles the memo:
@@ -169,6 +196,8 @@ Recent working screenshots:
 - `screenshots/parts-painter-arrow-default.png`
 - `screenshots/parts-painter-arrow-open.png`
 - `screenshots/parts-painter-arrow-portrait.png`
+- `screenshots/parts-painter-testmode-active.png`
+- `screenshots/parts-painter-testmode-toolbar.png`
 
 ## Deferred Ideas
 

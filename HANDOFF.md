@@ -12,6 +12,9 @@ The user wanted a new app folder for `Parts Painter`: a single-page HTML/CSS/JS 
 - iPad-ready teacher tray - a small pulsing pull-down arrow at the top middle opens the tray on touch devices, desktops, and smartboards.
 - No hover menu - the tray no longer opens on hover, so it cannot accidentally block top controls.
 - Learner-safe startup - the app opens in Free Paint mode with plain tiles, not with the answer memo showing.
+- Test Mode progression branch - `feature/test-mode-progression` adds test scoring and local grade unlocks without changing live `main` until merged.
+- Level gates - Demo and Grade 4 are available at the start; Grade 6 unlocks after full marks on any Grade 4 test; Grade 9 unlocks after full marks on any Grade 6 test.
+- Local progress - unlocks and best scores are stored in `localStorage` under `partsPainterProgressV1`.
 - Passage bank - dropdown includes the original demo plus 9 keyed South African English texts: 3 Grade 4, 3 Grade 6, 3 Grade 9.
 - Custom text retained - `Add Text` opens a textbox; custom text can be read, blocked, free-painted, erased, and printed, but has no memo/check/teach key.
 - Modes shipped - Free Paint, Teach Mode, Eraser, Guided Check, Show Memo toggle, Reset, Print.
@@ -34,12 +37,14 @@ The user wanted a new app folder for `Parts Painter`: a single-page HTML/CSS/JS 
 - Dev servers / ports: none
 - GitHub repo: `https://github.com/bajoseph01/parts-painter`
 - Live Pages URL: `https://bajoseph01.github.io/parts-painter/`
-- Open worktrees / branches: local git repo on `main`; check `git status` first.
+- Open worktrees / branches: test mode work is on `feature/test-mode-progression`; live Pages is still served from `main` until merged.
 
 ## Verification - how to confirm things still work
 
 - `npm.cmd run visual-check -- --width 1180 --height 820 --out screenshots/parts-painter-ipad-landscape.png --full-page` - captures the iPad landscape view.
 - Use Playwright/Chromium or the visible pull-down arrow to open the tray and screenshot `screenshots/parts-painter-arrow-open.png` - controls should be large, readable, and the arrow should not overlap any toolbar button.
+- Test Mode progression check: clear `partsPainterProgressV1`, confirm only Demo + Grade 4 are enabled, submit a wrong Grade 4 test and confirm Grade 6 stays locked, then submit full marks on Grade 4 and Grade 6 to unlock Grade 6 and Grade 9.
+- `screenshots/parts-painter-testmode-active.png` - confirms the tray closes during Test Mode and floating Submit Test does not cover the word board.
 - In browser/Playwright: select a bank text, click `Block Words`, then `Show Memo` twice - first click should colour all keyed tiles; second click should clear them.
 - In browser/Playwright: click `Teach Mode`, click one keyed tile, then double-click it - first click reveals one correct colour; double-click reveals all words with that same POS.
 - In browser/Playwright: click `Print` after changing states - print CSS should hide teacher tray, hotspots, mixer, hint, drawer, and toast while preserving current board content.

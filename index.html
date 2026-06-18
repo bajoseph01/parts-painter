@@ -268,8 +268,7 @@
       transition: opacity 160ms ease, transform 160ms ease;
     }
 
-    .stage.tools-open .teacher-bar,
-    .teacher-bar:focus-within {
+    .stage.tools-open .teacher-bar {
       opacity: 1;
       pointer-events: auto;
       transform: translate(-50%, 0) rotate(-0.5deg);
@@ -305,6 +304,26 @@
     .tool-btn.active {
       background: var(--ink);
       color: white;
+    }
+
+    .submit-test {
+      background: #fff0c7;
+      border-color: #ffb000;
+      color: var(--ink);
+    }
+
+    .test-submit-float {
+      position: absolute;
+      left: 50%;
+      bottom: 2.2%;
+      z-index: 9;
+      min-width: 178px;
+      transform: translateX(-50%) rotate(-0.4deg);
+      box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .bank-select option:disabled {
+      color: #777777;
     }
 
     .hotspot {
@@ -523,6 +542,7 @@
 
       .teacher-bar,
       .tools-toggle,
+      .test-submit-float,
       .hotspot,
       .mixer,
       .hint,
@@ -556,11 +576,15 @@
       <button id="teachBtn" class="tool-btn" type="button">Teach Mode</button>
       <button id="eraserBtn" class="tool-btn" type="button">Eraser</button>
       <button id="guidedBtn" class="tool-btn" type="button">Guided Check</button>
+      <button id="testBtn" class="tool-btn" type="button">Test Mode</button>
       <button id="memoBtn" class="tool-btn" type="button">Show Memo</button>
       <button id="printBtn" class="tool-btn" type="button">Print</button>
       <button id="resetBtn" class="tool-btn" type="button">Reset</button>
+      <button id="resetProgressBtn" class="tool-btn" type="button">Reset Progress</button>
       <button id="hideToolsBtn" class="tool-btn" type="button">Hide</button>
     </nav>
+
+    <button id="submitTestBtn" class="tool-btn submit-test test-submit-float" type="button" hidden>Submit Test</button>
 
     <section class="live-board" aria-label="Live writing space">
       <h1 id="boardTitle" class="board-title">The Match at Break Time</h1>
@@ -733,15 +757,67 @@
       }
     ];
 
+    const PROGRESS_KEY = "partsPainterProgressV1";
+    const GRADE_ORDER = ["Grade 4", "Grade 6", "Grade 9"];
+    const START_UNLOCKED_GRADES = ["Demo", "Grade 4"];
+
+    function defaultProgress() {
+      return {
+        unlockedGrades: [...START_UNLOCKED_GRADES],
+        bestScores: {},
+        completedGrades: []
+      };
+    }
+
+    function normalizeProgress(progress) {
+      const next = progress && typeof progress === "object" ? progress : defaultProgress();
+      const unlocked = new Set(Array.isArray(next.unlockedGrades) ? next.unlockedGrades : []);
+      START_UNLOCKED_GRADES.forEach((grade) => unlocked.add(grade));
+      return {
+        unlockedGrades: [...unlocked],
+        bestScores: next.bestScores && typeof next.bestScores === "object" ? next.bestScores : {},
+        completedGrades: Array.isArray(next.completedGrades) ? next.completedGrades : []
+      };
+    }
+
+    function loadProgress() {
+      try {
+        return normalizeProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY)));
+      } catch {
+        return defaultProgress();
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(state.progress));
+      } catch {
+        showToast("Progress could not be saved on this device.");
+      }
+    }
+
+    function isGradeUnlocked(grade) {
+      return state.progress.unlockedGrades.includes(grade);
+    }
+
+    function nextGradeAfter(grade) {
+      const index = GRADE_ORDER.indexOf(grade);
+      return index >= 0 ? GRADE_ORDER[index + 1] : null;
+    }
+
     const state = {
       selected: "noun",
       mode: "free",
       stage: "tiles",
+      currentId: "demo",
+      currentGrade: "Demo",
       currentTitle: DEMO_TITLE,
       currentText: wordsToText(DEMO_WORDS),
       currentWords: DEMO_WORDS.map(([word, pos]) => ({ word, pos })),
       hasAnswerKey: true,
-      memoVisible: false
+      memoVisible: false,
+      testSubmitted: false,
+      progress: loadProgress()
     };
 
     const bankSelect = document.getElementById("textBankSelect");
@@ -762,6 +838,9 @@
       toolsToggle.setAttribute("aria-expanded", String(isOpen));
       toolsToggle.setAttribute("aria-label", isOpen ? "Close teacher tools" : "Open teacher tools");
       toolsToggle.querySelector(".sr-only").textContent = isOpen ? "Close teacher tools" : "Open teacher tools";
+      if (!isOpen && document.activeElement?.closest?.(".teacher-bar")) {
+        toolsToggle.focus();
+      }
     }
 
     function tokenize(text) {
@@ -770,28 +849,46 @@
 
     function populateTextBank() {
       bankSelect.innerHTML = "";
-      TEXT_BANK.forEach((entry) => {
-        const option = document.createElement("option");
-        option.value = entry.id;
-        option.textContent = `${entry.grade}: ${entry.title}`;
-        bankSelect.appendChild(option);
+      const groups = ["Demo", ...GRADE_ORDER];
+      groups.forEach((grade) => {
+        const entries = TEXT_BANK.filter((entry) => entry.grade === grade);
+        if (!entries.length) return;
+
+        const group = document.createElement("optgroup");
+        group.label = isGradeUnlocked(grade) ? grade : `Locked ${grade}`;
+        bankSelect.appendChild(group);
+
+        entries.forEach((entry) => {
+          const option = document.createElement("option");
+          option.value = entry.id;
+          option.disabled = !isGradeUnlocked(entry.grade);
+          option.textContent = option.disabled
+            ? `Locked: ${entry.title}`
+            : `${entry.grade}: ${entry.title}`;
+          group.appendChild(option);
+        });
       });
-      const customOption = document.createElement("option");
-      customOption.value = "custom";
-      customOption.textContent = "Custom pasted text";
-      bankSelect.appendChild(customOption);
-      bankSelect.value = "demo";
+      bankSelect.value = state.currentId;
     }
 
     function loadBankText(id, mode = "reading") {
       const entry = TEXT_BANK.find((item) => item.id === id);
       if (!entry) return;
 
+      if (!isGradeUnlocked(entry.grade)) {
+        showToast(`${entry.grade} is locked. Score full marks in Test Mode to unlock it.`);
+        bankSelect.value = state.currentId;
+        return;
+      }
+
+      state.currentId = entry.id;
+      state.currentGrade = entry.grade;
       state.currentTitle = entry.title;
       state.currentText = wordsToText(entry.words);
       state.currentWords = entry.words.map(([word, pos]) => ({ word, pos }));
       state.hasAnswerKey = true;
       state.memoVisible = false;
+      state.testSubmitted = false;
       bankSelect.value = entry.id;
       closeDrawer();
 
@@ -800,6 +897,7 @@
       } else {
         showReading();
       }
+      setMode("free");
     }
 
     function matchingBankText(text) {
@@ -814,6 +912,8 @@
       document.getElementById("eraserBtn").classList.toggle("active", mode === "eraser");
       document.getElementById("guidedBtn").classList.toggle("active", mode === "guided");
       document.getElementById("memoBtn").classList.toggle("active", mode === "memo");
+      document.getElementById("testBtn").classList.toggle("active", mode === "test");
+      document.getElementById("submitTestBtn").hidden = mode !== "test";
 
       if (mode !== "memo" && state.memoVisible) {
         clearAllPaint();
@@ -824,7 +924,7 @@
         clearChecks();
         hint.textContent = state.stage === "tiles"
           ? "Free Paint: choose a grammar label, then tap any word. Ask learners to explain the choice."
-          : "Add Text shows the passage. Block Words turns it into tappable grammar units.";
+          : "Read it naturally first. Block Words turns it into tappable grammar units.";
       }
 
       if (mode === "teach") {
@@ -844,6 +944,21 @@
         hint.textContent = state.hasAnswerKey
           ? "Guided Check: correct colours stick. Wrong colours shake and ask for another try."
           : "Guided Check needs the demo answer key. Custom text stays in Free Paint.";
+      }
+
+      if (mode === "test") {
+        if (!state.hasAnswerKey) {
+          showToast("Test Mode needs a bank passage with an answer key.");
+          setMode("free");
+          return;
+        }
+        if (state.stage !== "tiles") {
+          blockWords();
+        }
+        state.testSubmitted = false;
+        clearAllPaint();
+        hint.textContent = "Test Mode: paint every word, then press Submit Test for your score.";
+        setToolsOpen(false);
       }
 
       if (mode === "memo") {
@@ -883,13 +998,15 @@
       }
 
       state.currentTitle = "Teacher Text";
+      state.currentId = "custom";
+      state.currentGrade = "Custom";
       state.currentText = next;
       state.currentWords = tokenize(next).map((word) => ({ word, pos: "" }));
       state.hasAnswerKey = false;
       state.memoVisible = false;
-      bankSelect.value = "custom";
       closeDrawer();
       showReading();
+      setMode("free");
     }
 
     function useDemoText() {
@@ -1002,13 +1119,92 @@
       tile.classList.add("painted");
       tile.classList.toggle("article", part === "article");
       tile.style.setProperty("--paint", PARTS[part].color);
-      tile.classList.remove("incorrect");
+      tile.classList.remove("correct", "incorrect");
     }
 
     function eraseTile(tile) {
       tile.dataset.paint = "";
       tile.classList.remove("painted", "article", "correct", "incorrect");
       tile.style.removeProperty("--paint");
+    }
+
+    function submitTest() {
+      if (state.mode !== "test") {
+        showToast("Open Test Mode first.");
+        return;
+      }
+      if (!state.hasAnswerKey) {
+        showToast("This text has no test memo yet.");
+        return;
+      }
+
+      const tiles = [...document.querySelectorAll(".word")];
+      if (!tiles.length) {
+        showToast("Press Block Words first.");
+        return;
+      }
+
+      let score = 0;
+      let unanswered = 0;
+      tiles.forEach((tile) => {
+        const isCorrect = tile.dataset.paint === tile.dataset.answer;
+        tile.classList.toggle("correct", isCorrect);
+        tile.classList.toggle("incorrect", !isCorrect);
+        if (isCorrect) {
+          score += 1;
+        }
+        if (!tile.dataset.paint) {
+          unanswered += 1;
+        }
+      });
+
+      state.testSubmitted = true;
+      const unlockedGrade = recordTestScore(score, tiles.length);
+
+      const scoreText = `${score}/${tiles.length}`;
+      if (score === tiles.length) {
+        hint.textContent = unlockedGrade
+          ? `Full marks: ${scoreText}. ${unlockedGrade} is now unlocked.`
+          : `Full marks: ${scoreText}. Brilliant.`;
+        showToast(unlockedGrade ? `${unlockedGrade} unlocked!` : `Full marks: ${scoreText}!`);
+      } else if (unanswered) {
+        hint.textContent = `Score: ${scoreText}. ${unanswered} words still need a colour. Fix them and submit again.`;
+        showToast(`Score: ${scoreText}. Keep going.`);
+      } else {
+        hint.textContent = `Score: ${scoreText}. Check the shaking words, repaint them, and submit again.`;
+        showToast(`Score: ${scoreText}. Try the marked words again.`);
+      }
+      requestAnimationFrame(fitTiles);
+    }
+
+    function recordTestScore(score, total) {
+      const existing = state.progress.bestScores[state.currentId];
+      if (!existing || score > existing.score || (score === existing.score && total > existing.total)) {
+        state.progress.bestScores[state.currentId] = {
+          score,
+          total,
+          grade: state.currentGrade,
+          title: state.currentTitle
+        };
+      }
+
+      if (score === total && GRADE_ORDER.includes(state.currentGrade)) {
+        if (!state.progress.completedGrades.includes(state.currentGrade)) {
+          state.progress.completedGrades.push(state.currentGrade);
+        }
+
+        const nextGrade = nextGradeAfter(state.currentGrade);
+        if (nextGrade && !isGradeUnlocked(nextGrade)) {
+          state.progress.unlockedGrades.push(nextGrade);
+          saveProgress();
+          populateTextBank();
+          bankSelect.value = state.currentId;
+          return nextGrade;
+        }
+      }
+
+      saveProgress();
+      return null;
     }
 
     function showMemo() {
@@ -1030,6 +1226,8 @@
       document.getElementById("teachBtn").classList.remove("active");
       document.getElementById("eraserBtn").classList.remove("active");
       document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("testBtn").classList.remove("active");
+      document.getElementById("submitTestBtn").hidden = true;
       document.getElementById("memoBtn").classList.add("active");
       document.querySelectorAll(".word").forEach((tile) => {
         applyPaint(tile, tile.dataset.answer);
@@ -1048,6 +1246,8 @@
       document.getElementById("teachBtn").classList.remove("active");
       document.getElementById("eraserBtn").classList.remove("active");
       document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("testBtn").classList.remove("active");
+      document.getElementById("submitTestBtn").hidden = true;
       document.getElementById("memoBtn").classList.remove("active");
       hint.textContent = "Memo hidden. The words are back to plain tiles for teaching or repainting.";
     }
@@ -1064,6 +1264,8 @@
       document.getElementById("teachBtn").classList.remove("active");
       document.getElementById("eraserBtn").classList.remove("active");
       document.getElementById("guidedBtn").classList.remove("active");
+      document.getElementById("testBtn").classList.remove("active");
+      document.getElementById("submitTestBtn").hidden = true;
       document.getElementById("memoBtn").classList.remove("active");
       hint.textContent = "Add Text shows the passage. Block Words turns it into tappable grammar units.";
     }
@@ -1150,15 +1352,29 @@
       window.print();
     }
 
+    function resetProgress() {
+      const confirmed = window.confirm("Reset saved level progress on this iPad?");
+      if (!confirmed) return;
+
+      state.progress = defaultProgress();
+      saveProgress();
+      populateTextBank();
+      loadBankText("demo", "tiles");
+      showToast("Progress reset. Demo and Grade 4 are unlocked.");
+    }
+
     document.getElementById("addTextBtn").addEventListener("click", openDrawer);
     document.getElementById("blockWordsBtn").addEventListener("click", blockWords);
     document.getElementById("freeBtn").addEventListener("click", () => setMode("free"));
     document.getElementById("teachBtn").addEventListener("click", () => setMode("teach"));
     document.getElementById("eraserBtn").addEventListener("click", () => setMode("eraser"));
     document.getElementById("guidedBtn").addEventListener("click", () => setMode("guided"));
+    document.getElementById("testBtn").addEventListener("click", () => setMode("test"));
+    document.getElementById("submitTestBtn").addEventListener("click", submitTest);
     document.getElementById("memoBtn").addEventListener("click", () => setMode("memo"));
     document.getElementById("printBtn").addEventListener("click", printCurrentMode);
     document.getElementById("resetBtn").addEventListener("click", resetBoard);
+    document.getElementById("resetProgressBtn").addEventListener("click", resetProgress);
     toolsToggle.addEventListener("click", () => {
       setToolsOpen(!stage.classList.contains("tools-open"));
     });
